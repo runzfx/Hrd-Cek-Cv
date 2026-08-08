@@ -10,6 +10,12 @@ Balas HANYA dalam format JSON valid, tanpa markdown, tanpa teks pembuka/penutup,
 {
   "nama": "<nama kandidat jika ada di CV asli, kalau tidak ada gunakan string kosong>",
   "kontak": "<baris kontak singkat jika ada: email/telepon/lokasi, kalau tidak ada gunakan string kosong>",
+  "data_pribadi": {
+    "tempat_tanggal_lahir": "<jika disebutkan eksplisit di CV asli, kalau tidak ada string kosong>",
+    "jenis_kelamin": "<jika disebutkan eksplisit di CV asli, kalau tidak ada string kosong>",
+    "status_pernikahan": "<jika disebutkan eksplisit di CV asli, kalau tidak ada string kosong>",
+    "alamat": "<alamat lengkap jika ada, kalau tidak ada string kosong>"
+  },
   "ringkasan_profil": "<2-3 kalimat ringkasan profil profesional yang relevan dengan target posisi>",
   "skill_utama": ["<skill 1>", "<skill 2>", "..."],
   "pengalaman": [
@@ -30,6 +36,7 @@ Balas HANYA dalam format JSON valid, tanpa markdown, tanpa teks pembuka/penutup,
 
 Aturan penting:
 - Gunakan HANYA informasi yang benar-benar ada atau bisa diwajarkan dari CV asli. Jangan mengarang perusahaan, gelar, atau periode yang sama sekali tidak disebutkan.
+- Untuk field di "data_pribadi", JANGAN mengarang. Isi hanya jika benar-benar tertulis eksplisit di CV asli, kalau tidak ada biarkan string kosong "".
 - Untuk metrik/angka yang tidak eksplisit disebutkan di CV asli, boleh menghaluskan bahasa tanpa memberi angka palsu yang terlalu spesifik jika tidak ada dasarnya — lebih baik deskriptif kuat daripada mengarang angka.
 - Array "proyek" boleh kosong [] jika CV asli tidak menyebutkan proyek.
 - Setiap pengalaman minimal punya 2-4 bullet.
