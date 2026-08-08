@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { extractTextFromFile } from "./extractText.js";
 import FlameGauge from "./FlameGauge.jsx";
+import GeneratedCv from "./GeneratedCv.jsx";
 
 const ACCEPTED = [".pdf", ".docx"];
 const MAX_SIZE_MB = 10;
@@ -14,12 +15,45 @@ export default function App() {
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef(null);
 
+  const [extractedText, setExtractedText] = useState("");
+  const [genStatus, setGenStatus] = useState("idle"); // idle | generating | done
+  const [genError, setGenError] = useState("");
+  const [generatedCv, setGeneratedCv] = useState(null);
+  const [copyHint, setCopyHint] = useState(false);
+
   const resetAll = () => {
     setFile(null);
     setTargetPosisi("");
     setStatus("idle");
     setError("");
     setResult(null);
+    setExtractedText("");
+    setGenStatus("idle");
+    setGenError("");
+    setGeneratedCv(null);
+  };
+
+  const handleGenerateCv = async () => {
+    if (!extractedText || !targetPosisi) return;
+    setGenError("");
+    setGenStatus("generating");
+    try {
+      const res = await fetch("/api/generate-cv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cvText: extractedText, targetPosisi }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Gagal membuat CV baru. Coba lagi.");
+      }
+      const data = await res.json();
+      setGeneratedCv(data);
+      setGenStatus("done");
+    } catch (err) {
+      setGenError(err.message || "Terjadi kesalahan tak terduga.");
+      setGenStatus("idle");
+    }
   };
 
   const onPickFile = (f) => {
@@ -58,6 +92,7 @@ export default function App() {
     try {
       setStatus("extracting");
       const cvText = await extractTextFromFile(file);
+      setExtractedText(cvText);
 
       setStatus("roasting");
       const res = await fetch("/api/roast", {
@@ -236,6 +271,29 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {genStatus !== "done" && (
+            <div className="card section gen-cta-card">
+              <div className="section__title">📝 Siap perbaikan beneran?</div>
+              <p className="gen-cta-text">
+                Biar AI langsung tulis ulang seluruh CV kamu jadi versi yang lebih
+                kuat, siap didownload sebagai .docx atau .txt.
+              </p>
+              <button className="cta" onClick={handleGenerateCv} disabled={genStatus === "generating"}>
+                {genStatus === "generating" && <span className="spinner" />}
+                {genStatus === "generating" ? "Menulis ulang CV..." : "Buat CV yang Sudah Diperbaiki ✍️"}
+              </button>
+              {genError && <div className="error-box">{genError}</div>}
+            </div>
+          )}
+
+          {genStatus === "done" && generatedCv && (
+            <GeneratedCv cv={generatedCv} onCopyDone={() => {
+              setCopyHint(true);
+              setTimeout(() => setCopyHint(false), 2000);
+            }} />
+          )}
+          {copyHint && <p className="copy-hint">Teks CV disalin ke clipboard ✓</p>}
 
           <div className="reset-row">
             <button className="reset-link" onClick={resetAll}>
