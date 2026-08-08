@@ -494,3 +494,106 @@ button {
   font-size: 12px;
   color: var(--text-faint);
 }
+
+/* ---------- Generate CV ---------- */
+
+.gen-cta-card {
+  text-align: center;
+}
+
+.gen-cta-text {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+
+.cta--sm {
+  padding: 10px 14px;
+  font-size: 13px;
+  width: auto;
+  margin-top: 0;
+}
+
+.cta--ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.gen-cv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.gen-cv-preview {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 16px;
+}
+
+.gen-cv-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.gen-cv-contact {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  margin-bottom: 14px;
+}
+
+.gen-cv-block {
+  margin-top: 16px;
+}
+
+.gen-cv-heading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ember-400);
+  margin-bottom: 8px;
+}
+
+.gen-cv-block p {
+  font-size: 14px;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.gen-cv-entry {
+  margin-bottom: 12px;
+}
+
+.gen-cv-entry__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gen-cv-entry__period {
+  font-weight: 400;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+
+.gen-cv-entry ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.gen-cv-entry li {
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+}
+
+.copy-hint {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--score-high);
+  margin-top: -8px;
+}
