@@ -1,0 +1,249 @@
+import { useCallback, useRef, useState } from "react";
+import { extractTextFromFile } from "./extractText.js";
+import FlameGauge from "./FlameGauge.jsx";
+
+const ACCEPTED = [".pdf", ".docx"];
+const MAX_SIZE_MB = 10;
+
+export default function App() {
+  const [file, setFile] = useState(null);
+  const [targetPosisi, setTargetPosisi] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | extracting | roasting | done
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+  const inputRef = useRef(null);
+
+  const resetAll = () => {
+    setFile(null);
+    setTargetPosisi("");
+    setStatus("idle");
+    setError("");
+    setResult(null);
+  };
+
+  const onPickFile = (f) => {
+    setError("");
+    if (!f) return;
+    const nameLower = f.name.toLowerCase();
+    const validExt = ACCEPTED.some((ext) => nameLower.endsWith(ext));
+    if (!validExt) {
+      setError("Format tidak didukung. Upload file PDF atau DOCX ya.");
+      return;
+    }
+    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
+      setError(`File terlalu besar. Maksimal ${MAX_SIZE_MB}MB.`);
+      return;
+    }
+    setFile(f);
+  };
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragActive(false);
+    const f = e.dataTransfer.files?.[0];
+    onPickFile(f);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!file) {
+      setError("Upload CV kamu dulu.");
+      return;
+    }
+    if (!targetPosisi.trim()) {
+      setError("Isi target posisi/pekerjaan dulu ya, biar roasting-nya relevan.");
+      return;
+    }
+    setError("");
+    try {
+      setStatus("extracting");
+      const cvText = await extractTextFromFile(file);
+
+      setStatus("roasting");
+      const res = await fetch("/api/roast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cvText, targetPosisi: targetPosisi.trim() }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Gagal memproses roasting. Coba lagi.");
+      }
+
+      const data = await res.json();
+      setResult(data);
+      setStatus("done");
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan tak terduga.");
+      setStatus("idle");
+    }
+  };
+
+  const isBusy = status === "extracting" || status === "roasting";
+
+  return (
+    <div className="page">
+      <div className="topbar">
+        <span className="topbar__mark">🔥</span>
+        <span className="topbar__name">CV Roasting</span>
+        <span className="topbar__badge">AI Powered</span>
+      </div>
+
+      {status !== "done" && (
+        <>
+          <div className="hero">
+            <span className="hero__eyebrow">Sebelum HR yang nolak</span>
+            <h1 className="hero__title">
+              Biar <em>AI yang bakar</em> CV-mu duluan
+            </h1>
+            <p className="hero__sub">
+              Upload CV, kasih tahu posisi incaranmu, dan dapatkan kritik tajam
+              yang langsung bisa dipakai buat perbaikan — bukan sekadar
+              "sudah bagus".
+            </p>
+          </div>
+
+          <div className="card">
+            <label className="field-label" htmlFor="posisi">
+              🎯 Target Posisi / Pekerjaan <span className="req">*wajib diisi</span>
+            </label>
+            <input
+              id="posisi"
+              className="text-input"
+              placeholder="Contoh: Frontend Developer, Data Analyst..."
+              value={targetPosisi}
+              onChange={(e) => setTargetPosisi(e.target.value)}
+              disabled={isBusy}
+            />
+
+            <div
+              className={`dropzone ${dragActive ? "dropzone--active" : ""}`}
+              onClick={() => inputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleDrop}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
+              }}
+            >
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".pdf,.docx"
+                hidden
+                onChange={(e) => onPickFile(e.target.files?.[0])}
+              />
+              {file ? (
+                <div className="dropzone__file">
+                  <span>📄 {file.name}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                    }}
+                  >
+                    ganti
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="dropzone__icon">⬆️</span>
+                  <div className="dropzone__title">
+                    Seret & taruh CV di sini, atau klik untuk pilih file
+                  </div>
+                  <div className="dropzone__hint">PDF / DOCX hingga {MAX_SIZE_MB}MB</div>
+                </>
+              )}
+            </div>
+
+            <button className="cta" onClick={handleSubmit} disabled={isBusy}>
+              {isBusy && <span className="spinner" />}
+              {status === "extracting" && "Membaca CV..."}
+              {status === "roasting" && "Mas Erdi lagi mikir pedas..."}
+              {!isBusy && <>Roasting Sekarang 🔥</>}
+            </button>
+
+            {error && <div className="error-box">{error}</div>}
+          </div>
+
+          <p className="footer-note">CV diproses langsung dan tidak disimpan di server.</p>
+        </>
+      )}
+
+      {status === "done" && result && (
+        <div className="results">
+          <div className="card gauge-card">
+            <FlameGauge score={result.skor} />
+            <p className="roast-quote">{result.ringkasan_roasting}</p>
+          </div>
+
+          {result.kekuatan?.length > 0 && (
+            <div className="card section">
+              <div className="section__title">✅ Yang udah oke</div>
+              <ul className="pill-list pill-list--good">
+                {result.kekuatan.map((k, i) => (
+                  <li key={i}>{k}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.kelemahan?.length > 0 && (
+            <div className="card section">
+              <div className="section__title">🔥 Bagian yang gosong</div>
+              <ul className="pill-list pill-list--bad">
+                {result.kelemahan.map((k, i) => (
+                  <li key={i}>{k}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.perbaikan_bullet?.length > 0 && (
+            <div className="card section">
+              <div className="section__title">✏️ Contoh perbaikan bullet</div>
+              {result.perbaikan_bullet.map((b, i) => (
+                <div className="bullet-fix" key={i}>
+                  <div className="bullet-fix__row bullet-fix__row--before">
+                    <span className="bullet-fix__tag">Before</span>
+                    {b.before}
+                  </div>
+                  <div className="bullet-fix__row bullet-fix__row--after">
+                    <span className="bullet-fix__tag">After</span>
+                    {b.after}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.kata_kunci_hilang?.length > 0 && (
+            <div className="card section">
+              <div className="section__title">🔑 Keyword yang kayaknya kelewat</div>
+              <div className="keyword-chips">
+                {result.kata_kunci_hilang.map((kw, i) => (
+                  <span className="keyword-chip" key={i}>
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="reset-row">
+            <button className="reset-link" onClick={resetAll}>
+              ↺ Roasting CV lain
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
