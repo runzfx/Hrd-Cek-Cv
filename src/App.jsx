@@ -19,7 +19,6 @@ export default function App() {
   const [genStatus, setGenStatus] = useState("idle"); // idle | generating | done
   const [genError, setGenError] = useState("");
   const [generatedCv, setGeneratedCv] = useState(null);
-  const [copyHint, setCopyHint] = useState(false);
 
   const resetAll = () => {
     setFile(null);
@@ -287,13 +286,7 @@ export default function App() {
             </div>
           )}
 
-          {genStatus === "done" && generatedCv && (
-            <GeneratedCv cv={generatedCv} onCopyDone={() => {
-              setCopyHint(true);
-              setTimeout(() => setCopyHint(false), 2000);
-            }} />
-          )}
-          {copyHint && <p className="copy-hint">Teks CV disalin ke clipboard ✓</p>}
+          {genStatus === "done" && generatedCv && <GeneratedCv cv={generatedCv} />}
 
           <div className="reset-row">
             <button className="reset-link" onClick={resetAll}>
