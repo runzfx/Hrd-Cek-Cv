@@ -42,6 +42,44 @@ Aturan penting:
 - Setiap pengalaman minimal punya 2-4 bullet.
 - Gunakan Bahasa Indonesia profesional, natural, tanpa emoji.`;
 
+function extractJson(rawText) {
+  const cleaned = rawText.replace(/```json|```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  const sliced = start !== -1 && end !== -1 ? cleaned.slice(start, end + 1) : cleaned;
+  return JSON.parse(sliced);
+}
+
+async function callAnthropic(apiKey, userMessage) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 3500,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    console.error("Anthropic API error:", response.status, errBody);
+    throw new Error("API_ERROR");
+  }
+
+  const data = await response.json();
+  if (data.stop_reason === "max_tokens") {
+    console.error("Response truncated by max_tokens");
+  }
+  const textBlock = (data.content || []).find((b) => b.type === "text");
+  return textBlock ? textBlock.text : "";
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -75,41 +113,27 @@ Isi CV asli:
 ${trimmedCv}
 """`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 2500,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userMessage }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error("Anthropic API error:", response.status, errBody);
+    let rawText;
+    try {
+      rawText = await callAnthropic(apiKey, userMessage);
+    } catch (e) {
       res.status(502).json({ error: "Gagal menghubungi layanan AI. Coba lagi sebentar lagi." });
       return;
     }
 
-    const data = await response.json();
-    const textBlock = (data.content || []).find((b) => b.type === "text");
-    const rawText = textBlock ? textBlock.text : "";
-
-    const cleaned = rawText.replace(/```json|```/g, "").trim();
-
     let parsed;
     try {
-      parsed = JSON.parse(cleaned);
+      parsed = extractJson(rawText);
     } catch (e) {
-      console.error("Failed to parse model JSON:", cleaned);
-      res.status(502).json({ error: "Format hasil dari AI tidak sesuai. Coba lagi." });
-      return;
+      console.error("Failed to parse model JSON, retrying once. Raw:", rawText);
+      try {
+        rawText = await callAnthropic(apiKey, userMessage);
+        parsed = extractJson(rawText);
+      } catch (e2) {
+        console.error("Retry also failed. Raw:", rawText);
+        res.status(502).json({ error: "Format hasil dari AI tidak sesuai. Coba lagi." });
+        return;
+      }
     }
 
     res.status(200).json(parsed);
