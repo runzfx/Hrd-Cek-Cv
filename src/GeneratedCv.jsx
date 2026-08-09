@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   downloadCvAsDocx,
   downloadCvAsPdf,
   downloadCvAsTxt,
   cvToPlainText,
 } from "./cvExport.js";
+import { downloadNodeAsPng } from "./htmlToPng.js";
 
 const MAX_PHOTO_MB = 5;
 
@@ -37,6 +38,7 @@ export default function GeneratedCv({ cv }) {
   const [photoError, setPhotoError] = useState("");
   const [copyHint, setCopyHint] = useState(false);
   const [busy, setBusy] = useState("");
+  const previewRef = useRef(null);
 
   const isTradisional = mode === "tradisional";
   const exportOptions = { mode, personalData, photoDataUrl };
@@ -157,6 +159,15 @@ export default function GeneratedCv({ cv }) {
     }
   };
 
+  const handlePng = async () => {
+    setBusy("png");
+    try {
+      await downloadNodeAsPng(previewRef.current, "CV-Diperbaiki.png");
+    } finally {
+      setBusy("");
+    }
+  };
+
   return (
     <div className="card section generated-cv">
       <div className="section__title-row">
@@ -249,13 +260,16 @@ export default function GeneratedCv({ cv }) {
         <button className="cta cta--sm cta--ghost" onClick={() => downloadCvAsTxt(cvData, exportOptions)}>
           ⬇️ Download .txt
         </button>
+        <button className="cta cta--sm cta--ghost" onClick={handlePng} disabled={busy === "png" || editMode} title={editMode ? "Selesai edit dulu ya" : ""}>
+          {busy === "png" ? "Menyiapkan..." : "🖼️ Download .png"}
+        </button>
         <button className="cta cta--sm cta--ghost" onClick={handleCopy}>
           📋 Salin teks
         </button>
       </div>
       {copyHint && <p className="copy-hint">Teks CV disalin ke clipboard ✓</p>}
 
-      <div className="gen-cv-preview">
+      <div className="gen-cv-preview" ref={previewRef}>
         {editMode ? (
           <div className="edit-fields">
             <label className="edit-label">Nama</label>
