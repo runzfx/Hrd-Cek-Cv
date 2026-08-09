@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   downloadLetterAsDocx,
   downloadLetterAsPdf,
   downloadLetterAsTxt,
 } from "./coverLetterExport.js";
+import { downloadNodeAsPng } from "./htmlToPng.js";
 
-export default function CoverLetter({ cvText, targetPosisi }) {
+export default function CoverLetter({ cvText, targetPosisi, jobUrl }) {
   const [namaPerusahaan, setNamaPerusahaan] = useState("");
   const [infoTambahan, setInfoTambahan] = useState("");
   const [bahasa, setBahasa] = useState("id"); // "id" | "en"
@@ -16,6 +17,17 @@ export default function CoverLetter({ cvText, targetPosisi }) {
   const [subjek, setSubjek] = useState("");
   const [copyHint, setCopyHint] = useState(false);
   const [editingLetter, setEditingLetter] = useState(false);
+  const [pngBusy, setPngBusy] = useState(false);
+  const previewRef = useRef(null);
+
+  const handlePng = async () => {
+    setPngBusy(true);
+    try {
+      await downloadNodeAsPng(previewRef.current, "Surat-Lamaran.png");
+    } finally {
+      setPngBusy(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!namaPerusahaan.trim()) {
@@ -35,6 +47,7 @@ export default function CoverLetter({ cvText, targetPosisi }) {
           infoTambahan: infoTambahan.trim(),
           bahasa,
           gaya,
+          jobUrl,
         }),
       });
       if (!res.ok) {
@@ -160,6 +173,14 @@ export default function CoverLetter({ cvText, targetPosisi }) {
             <button className="cta cta--sm cta--ghost" onClick={() => downloadLetterAsTxt(letter, subjek)}>
               ⬇️ Download .txt
             </button>
+            <button
+              className="cta cta--sm cta--ghost"
+              onClick={handlePng}
+              disabled={pngBusy || editingLetter}
+              title={editingLetter ? "Selesai edit dulu ya" : ""}
+            >
+              {pngBusy ? "Menyiapkan..." : "🖼️ Download .png"}
+            </button>
             <button className="cta cta--sm cta--ghost" onClick={handleCopy}>
               📋 Salin teks
             </button>
@@ -187,7 +208,7 @@ export default function CoverLetter({ cvText, targetPosisi }) {
               />
             </div>
           ) : (
-            <div className="letter-preview">
+            <div className="letter-preview" ref={previewRef}>
               {subjek && <div className="letter-subject">Subjek: {subjek}</div>}
               {letter.split(/\n{2,}/).map((p, i) => (
                 <p key={i}>{p.trim()}</p>
