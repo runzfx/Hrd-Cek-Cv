@@ -3,6 +3,7 @@ import { extractTextFromFile } from "./extractText.js";
 import FlameGauge from "./FlameGauge.jsx";
 import GeneratedCv from "./GeneratedCv.jsx";
 import CoverLetter from "./CoverLetter.jsx";
+import { downloadNodeAsPng } from "./htmlToPng.js";
 
 const ACCEPTED = [".pdf", ".docx"];
 const MAX_SIZE_MB = 10;
@@ -10,6 +11,7 @@ const MAX_SIZE_MB = 10;
 export default function App() {
   const [file, setFile] = useState(null);
   const [targetPosisi, setTargetPosisi] = useState("");
+  const [lowonganUrl, setLowonganUrl] = useState("");
   const [status, setStatus] = useState("idle"); // idle | extracting | roasting | done
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -20,10 +22,22 @@ export default function App() {
   const [genStatus, setGenStatus] = useState("idle"); // idle | generating | done
   const [genError, setGenError] = useState("");
   const [generatedCv, setGeneratedCv] = useState(null);
+  const roastCardRef = useRef(null);
+  const [pngBusy, setPngBusy] = useState(false);
+
+  const handleDownloadRoastPng = async () => {
+    setPngBusy(true);
+    try {
+      await downloadNodeAsPng(roastCardRef.current, "Hasil-Roasting-CV.png");
+    } finally {
+      setPngBusy(false);
+    }
+  };
 
   const resetAll = () => {
     setFile(null);
     setTargetPosisi("");
+    setLowonganUrl("");
     setStatus("idle");
     setError("");
     setResult(null);
@@ -41,7 +55,7 @@ export default function App() {
       const res = await fetch("/api/generate-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cvText: extractedText, targetPosisi }),
+        body: JSON.stringify({ cvText: extractedText, targetPosisi, jobUrl: lowonganUrl.trim() }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -98,7 +112,11 @@ export default function App() {
       const res = await fetch("/api/roast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cvText, targetPosisi: targetPosisi.trim() }),
+        body: JSON.stringify({
+          cvText,
+          targetPosisi: targetPosisi.trim(),
+          jobUrl: lowonganUrl.trim(),
+        }),
       });
 
       if (!res.ok) {
@@ -151,6 +169,23 @@ export default function App() {
               onChange={(e) => setTargetPosisi(e.target.value)}
               disabled={isBusy}
             />
+
+            <label className="field-label letter-info-label" htmlFor="lowonganUrl">
+              🔗 Link Lowongan (opsional)
+            </label>
+            <input
+              id="lowonganUrl"
+              className="text-input"
+              placeholder="Tempel link lowongan (JobStreet, Glints, dll)"
+              value={lowonganUrl}
+              onChange={(e) => setLowonganUrl(e.target.value)}
+              disabled={isBusy}
+            />
+            <p className="format-hint">
+              Kalau diisi, analisis dibandingkan langsung ke requirement di lowongan
+              itu — lebih akurat daripada cuma nama posisi. Beberapa situs (LinkedIn,
+              Instagram) kadang gagal dibaca otomatis karena butuh login.
+            </p>
 
             <div
               className={`dropzone ${dragActive ? "dropzone--active" : ""}`}
@@ -214,10 +249,23 @@ export default function App() {
 
       {status === "done" && result && (
         <div className="results">
-          <div className="card gauge-card">
+          <div className="card gauge-card" ref={roastCardRef}>
             <FlameGauge score={result.skor} />
             <p className="roast-quote">{result.ringkasan_roasting}</p>
           </div>
+
+          <div className="png-share-row">
+            <button className="cta cta--sm cta--ghost" onClick={handleDownloadRoastPng} disabled={pngBusy}>
+              {pngBusy ? "Menyiapkan..." : "🖼️ Download PNG (buat di-share)"}
+            </button>
+          </div>
+
+          {result.catatan_lowongan && (
+            <p className="job-link-note">
+              ⚠️ Link lowongan tidak bisa dibaca otomatis: {result.catatan_lowongan} Analisis di atas
+              tetap dijalankan pakai target posisi biasa.
+            </p>
+          )}
 
           {result.kekuatan?.length > 0 && (
             <div className="card section">
@@ -290,7 +338,7 @@ export default function App() {
           {genStatus === "done" && generatedCv && <GeneratedCv cv={generatedCv} />}
 
           {extractedText && targetPosisi && (
-            <CoverLetter cvText={extractedText} targetPosisi={targetPosisi} />
+            <CoverLetter cvText={extractedText} targetPosisi={targetPosisi} jobUrl={lowonganUrl.trim()} />
           )}
 
           <div className="reset-row">
