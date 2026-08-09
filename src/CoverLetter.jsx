@@ -8,9 +8,12 @@ import {
 export default function CoverLetter({ cvText, targetPosisi }) {
   const [namaPerusahaan, setNamaPerusahaan] = useState("");
   const [infoTambahan, setInfoTambahan] = useState("");
+  const [bahasa, setBahasa] = useState("id"); // "id" | "en"
+  const [gaya, setGaya] = useState("resmi"); // "resmi" | "email"
   const [status, setStatus] = useState("idle"); // idle | generating | done
   const [error, setError] = useState("");
   const [letter, setLetter] = useState("");
+  const [subjek, setSubjek] = useState("");
   const [copyHint, setCopyHint] = useState(false);
 
   const handleGenerate = async () => {
@@ -29,6 +32,8 @@ export default function CoverLetter({ cvText, targetPosisi }) {
           targetPosisi,
           namaPerusahaan: namaPerusahaan.trim(),
           infoTambahan: infoTambahan.trim(),
+          bahasa,
+          gaya,
         }),
       });
       if (!res.ok) {
@@ -37,6 +42,7 @@ export default function CoverLetter({ cvText, targetPosisi }) {
       }
       const data = await res.json();
       setLetter(data.surat || "");
+      setSubjek(data.subjek || "");
       setStatus("done");
     } catch (err) {
       setError(err.message || "Terjadi kesalahan tak terduga.");
@@ -46,7 +52,8 @@ export default function CoverLetter({ cvText, targetPosisi }) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(letter);
+      const text = subjek ? `Subjek: ${subjek}\n\n${letter}` : letter;
+      await navigator.clipboard.writeText(text);
       setCopyHint(true);
       setTimeout(() => setCopyHint(false), 2000);
     } catch (e) {
@@ -60,6 +67,46 @@ export default function CoverLetter({ cvText, targetPosisi }) {
 
       {status !== "done" && (
         <>
+          <div className="toggle-row">
+            <div className="format-toggle">
+              <button
+                className={`format-toggle__btn ${bahasa === "id" ? "format-toggle__btn--active" : ""}`}
+                onClick={() => setBahasa("id")}
+                disabled={status === "generating"}
+              >
+                🇮🇩 Indonesia
+              </button>
+              <button
+                className={`format-toggle__btn ${bahasa === "en" ? "format-toggle__btn--active" : ""}`}
+                onClick={() => setBahasa("en")}
+                disabled={status === "generating"}
+              >
+                🇬🇧 English
+              </button>
+            </div>
+            <div className="format-toggle">
+              <button
+                className={`format-toggle__btn ${gaya === "resmi" ? "format-toggle__btn--active" : ""}`}
+                onClick={() => setGaya("resmi")}
+                disabled={status === "generating"}
+              >
+                Surat Resmi
+              </button>
+              <button
+                className={`format-toggle__btn ${gaya === "email" ? "format-toggle__btn--active" : ""}`}
+                onClick={() => setGaya("email")}
+                disabled={status === "generating"}
+              >
+                Email Singkat
+              </button>
+            </div>
+          </div>
+          <p className="format-hint">
+            {gaya === "email"
+              ? "Versi pendek siap tempel ke badan email, lengkap dengan subjek."
+              : "Surat lamaran lengkap bergaya formal untuk dilampirkan sebagai dokumen."}
+          </p>
+
           <label className="field-label" htmlFor="perusahaan">
             🏢 Nama Perusahaan <span className="req">*wajib diisi</span>
           </label>
@@ -87,7 +134,7 @@ export default function CoverLetter({ cvText, targetPosisi }) {
 
           <button className="cta" onClick={handleGenerate} disabled={status === "generating"}>
             {status === "generating" && <span className="spinner" />}
-            {status === "generating" ? "Menulis surat..." : "Buat Surat Lamaran ✍️"}
+            {status === "generating" ? "Menulis..." : "Buat Surat Lamaran ✍️"}
           </button>
 
           {error && <div className="error-box">{error}</div>}
@@ -97,13 +144,13 @@ export default function CoverLetter({ cvText, targetPosisi }) {
       {status === "done" && (
         <>
           <div className="gen-cv-actions">
-            <button className="cta cta--sm" onClick={() => downloadLetterAsPdf(letter)}>
+            <button className="cta cta--sm" onClick={() => downloadLetterAsPdf(letter, subjek)}>
               ⬇️ Download .pdf
             </button>
-            <button className="cta cta--sm cta--ghost" onClick={() => downloadLetterAsDocx(letter)}>
+            <button className="cta cta--sm cta--ghost" onClick={() => downloadLetterAsDocx(letter, subjek)}>
               ⬇️ Download .docx
             </button>
-            <button className="cta cta--sm cta--ghost" onClick={() => downloadLetterAsTxt(letter)}>
+            <button className="cta cta--sm cta--ghost" onClick={() => downloadLetterAsTxt(letter, subjek)}>
               ⬇️ Download .txt
             </button>
             <button className="cta cta--sm cta--ghost" onClick={handleCopy}>
@@ -113,6 +160,7 @@ export default function CoverLetter({ cvText, targetPosisi }) {
           {copyHint && <p className="copy-hint">Surat disalin ke clipboard ✓</p>}
 
           <div className="letter-preview">
+            {subjek && <div className="letter-subject">Subjek: {subjek}</div>}
             {letter.split(/\n{2,}/).map((p, i) => (
               <p key={i}>{p.trim()}</p>
             ))}
