@@ -704,3 +704,32 @@ button {
   color: var(--text-muted);
   line-height: 1.6;
 }
+
+/* ---------- Cover letter ---------- */
+
+.letter-info-label {
+  margin-top: 14px;
+}
+
+.textarea-input {
+  resize: vertical;
+  min-height: 64px;
+  font-family: inherit;
+}
+
+.letter-preview {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.letter-preview p {
+  margin: 0 0 14px;
+  white-space: pre-wrap;
+}
+
+.letter-preview p:last-child {
+  margin-bottom: 0;
+}
