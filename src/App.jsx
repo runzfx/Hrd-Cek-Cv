@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { extractTextFromFile } from "./extractText.js";
 import FlameGauge from "./FlameGauge.jsx";
 import GeneratedCv from "./GeneratedCv.jsx";
+import CoverLetter from "./CoverLetter.jsx";
 
 const ACCEPTED = [".pdf", ".docx"];
 const MAX_SIZE_MB = 10;
@@ -287,6 +288,10 @@ export default function App() {
           )}
 
           {genStatus === "done" && generatedCv && <GeneratedCv cv={generatedCv} />}
+
+          {extractedText && targetPosisi && (
+            <CoverLetter cvText={extractedText} targetPosisi={targetPosisi} />
+          )}
 
           <div className="reset-row">
             <button className="reset-link" onClick={resetAll}>
