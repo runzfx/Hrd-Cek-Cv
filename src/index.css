@@ -733,3 +733,17 @@ button {
 .letter-preview p:last-child {
   margin-bottom: 0;
 }
+
+.toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.letter-subject {
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
