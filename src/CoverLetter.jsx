@@ -15,6 +15,7 @@ export default function CoverLetter({ cvText, targetPosisi }) {
   const [letter, setLetter] = useState("");
   const [subjek, setSubjek] = useState("");
   const [copyHint, setCopyHint] = useState(false);
+  const [editingLetter, setEditingLetter] = useState(false);
 
   const handleGenerate = async () => {
     if (!namaPerusahaan.trim()) {
@@ -143,6 +144,12 @@ export default function CoverLetter({ cvText, targetPosisi }) {
 
       {status === "done" && (
         <>
+          <div className="section__title-row section__title-row--inline">
+            <button className="edit-toggle" onClick={() => setEditingLetter((v) => !v)}>
+              {editingLetter ? "✓ Selesai Edit" : "✏️ Edit"}
+            </button>
+          </div>
+
           <div className="gen-cv-actions">
             <button className="cta cta--sm" onClick={() => downloadLetterAsPdf(letter, subjek)}>
               ⬇️ Download .pdf
@@ -159,12 +166,34 @@ export default function CoverLetter({ cvText, targetPosisi }) {
           </div>
           {copyHint && <p className="copy-hint">Surat disalin ke clipboard ✓</p>}
 
-          <div className="letter-preview">
-            {subjek && <div className="letter-subject">Subjek: {subjek}</div>}
-            {letter.split(/\n{2,}/).map((p, i) => (
-              <p key={i}>{p.trim()}</p>
-            ))}
-          </div>
+          {editingLetter ? (
+            <div className="edit-fields">
+              {subjek !== "" && (
+                <>
+                  <label className="edit-label">Subjek</label>
+                  <input
+                    className="text-input text-input--sm"
+                    value={subjek}
+                    onChange={(e) => setSubjek(e.target.value)}
+                  />
+                </>
+              )}
+              <label className="edit-label">Isi Surat</label>
+              <textarea
+                className="text-input textarea-input letter-edit-textarea"
+                rows={14}
+                value={letter}
+                onChange={(e) => setLetter(e.target.value)}
+              />
+            </div>
+          ) : (
+            <div className="letter-preview">
+              {subjek && <div className="letter-subject">Subjek: {subjek}</div>}
+              {letter.split(/\n{2,}/).map((p, i) => (
+                <p key={i}>{p.trim()}</p>
+              ))}
+            </div>
+          )}
 
           <div className="reset-row">
             <button className="reset-link" onClick={() => setStatus("idle")}>
